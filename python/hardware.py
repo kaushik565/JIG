@@ -174,7 +174,7 @@ class GPIOHardwareController(BaseHardwareController):  # pragma: no cover - hard
             GPIO.setup(self.busy_pin, GPIO.OUT, initial=GPIO.LOW)
         
         # SCANNER hardware compatibility: GPIO 18 and 21
-        # NOTE: GPIO 18 is typically shared between SCANNER (sbc_busy) and ACTJv20(RASP_IN_PIC)
+        # NOTE: GPIO 18 is typically shared between SCANNER (sbc_busy) and ACTJv20 (RASP_IN_PIC)
         # Set initial state to HIGH to prevent "SBC ER-1" error on SCANNER hardware
         self.sbc_busy_pin = 18  # SBC busy indicator (matches SCANNER)
         self.status_pin = 21    # Status output to PIC (matches SCANNER)
@@ -199,13 +199,13 @@ class GPIOHardwareController(BaseHardwareController):  # pragma: no cover - hard
             # Separate pins - need to setup RASP_IN_PIC independently
             GPIO.setup(self.rasp_in_pic_pin, GPIO.OUT, initial=GPIO.HIGH)
             self.logger.info(
-                "RASP_IN_PIC configured on GPIO %d (separate from SCANNER sbc_busy GPIO %d)",
+                "RASP_IN_PIC configured on GPIO %d (separate from sbc_busy_pin GPIO %d)",
                 self.rasp_in_pic_pin, self.sbc_busy_pin
             )
         else:
             # Shared GPIO 18 for both RASP_IN_PIC and sbc_busy (already configured above)
             self.logger.info(
-                "RASP_IN_PIC and sbc_busy share GPIO %d (SCANNER/ACTJv20 compatible mode)",
+                "RASP_IN_PIC and sbc_busy_pin share GPIO %d (compatible with SCANNER and ACTJv20 modes)",
                 self.rasp_in_pic_pin
             )
         
