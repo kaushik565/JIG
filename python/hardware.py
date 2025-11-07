@@ -174,24 +174,29 @@ class GPIOHardwareController(BaseHardwareController):  # pragma: no cover - hard
             GPIO.setup(self.busy_pin, GPIO.OUT, initial=GPIO.LOW)
         
         # SCANNER hardware compatibility: GPIO 18 and 21
+        # NOTE: GPIO 18 is shared between SCANNER (sbc_busy) and ACTJv20(RASP_IN_PIC)
+        # Set initial state to HIGH to prevent "SBC ER-1" error on SCANNER hardware
         self.sbc_busy_pin = 18  # SBC busy indicator (matches SCANNER)
         self.status_pin = 21    # Status output to PIC (matches SCANNER)
-        GPIO.setup(self.sbc_busy_pin, GPIO.OUT, initial=GPIO.LOW)
-        GPIO.setup(self.status_pin, GPIO.OUT, initial=GPIO.LOW)
         
         # ACTJv20(RJSR) legacy hardware compatibility handshake pins
         self.rasp_in_pic_pin = self.handshake_pins.get("rasp_in_pic", 18)
         self.int_pic_pin = self.handshake_pins.get("int_pic")
         self.shd_pic_pin = self.handshake_pins.get("shd_pic")
 
+        # Set up GPIO 18 only once (shared between sbc_busy and rasp_in_pic)
+        # Initial state HIGH to clear "SBC ER-1" error immediately
+        GPIO.setup(self.sbc_busy_pin, GPIO.OUT, initial=GPIO.HIGH)
+        
+        # Set up GPIO 21 (status pin)
+        GPIO.setup(self.status_pin, GPIO.OUT, initial=GPIO.HIGH)
+        
+        # Set up other ACTJv20 pins (but skip GPIO 18 as it's already configured)
         if self.shd_pic_pin is not None:
             GPIO.setup(self.shd_pic_pin, GPIO.OUT, initial=GPIO.LOW)
 
         if self.int_pic_pin is not None:
             GPIO.setup(self.int_pic_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-
-        if self.rasp_in_pic_pin is not None:
-            GPIO.setup(self.rasp_in_pic_pin, GPIO.OUT, initial=GPIO.LOW)
 
         # Cartridge locating sensor pin (input, matches SCANNER)
         self.locating_sensor_pin = pin_map.get("cartridge_sensor", 20)  # Default to GPIO 20
@@ -359,16 +364,9 @@ def get_hardware_controller() -> BaseHardwareController:
     global _controller
     if _controller is None:
         _controller = _create_controller()
-        # Initialise PIC handshake line to BUSY/LOW until batch ready
-        try:
-            _controller.set_rasp_in_pic(False)
-            rasp_pin = ACTJ_LEGACY_GPIO_PINS.get("rasp_in_pic")
-            logging.getLogger("hardware").info(
-                "[INIT] RASP_IN_PIC (GPIO %s) forced LOW until batch ready.",
-                rasp_pin if rasp_pin is not None else "n/a",
-            )
-        except Exception as e:
-            logging.getLogger("hardware").error(f"[INIT] Failed to drive RASP_IN_PIC LOW: {e}")
+        # NOTE: RASP_IN_PIC initialization moved to launch_app() to prevent GPIO conflicts
+        # GPIO 18 must be HIGH immediately for SCANNER hardware (to clear "SBC ER-1" error)
+        # GPIO 18 will be managed by launch_app() and batch lifecycle methods
     return _controller
 
 
