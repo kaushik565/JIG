@@ -198,15 +198,15 @@ class GPIOHardwareController(BaseHardwareController):  # pragma: no cover - hard
                 "RASP_IN_PIC configured on GPIO %d (separate from SCANNER sbc_busy GPIO %d)",
                 self.rasp_in_pic_pin, self.sbc_busy_pin
             )
+        elif self.rasp_in_pic_pin == self.sbc_busy_pin:
+            # rasp_in_pic_pin equals sbc_busy_pin (shared GPIO 18)
+            self.logger.info(
+                "RASP_IN_PIC and sbc_busy share GPIO %d (SCANNER/ACTJv20 compatible mode)",
+                self.rasp_in_pic_pin
+            )
         else:
-            # Either rasp_in_pic_pin is None or it equals sbc_busy_pin
-            if self.rasp_in_pic_pin == self.sbc_busy_pin:
-                self.logger.info(
-                    "RASP_IN_PIC and sbc_busy share GPIO %d (SCANNER/ACTJv20 compatible mode)",
-                    self.rasp_in_pic_pin
-                )
-            else:
-                self.logger.debug("RASP_IN_PIC not configured (rasp_in_pic_pin is None)")
+            # rasp_in_pic_pin is None
+            self.logger.debug("RASP_IN_PIC not configured (rasp_in_pic_pin is None)")
         
         # Set up other ACTJv20 pins
         if self.shd_pic_pin is not None:
