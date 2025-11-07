@@ -1585,7 +1585,6 @@ class BatchScannerApp:
 
         self._show_scan()
         self._update_session_footer()
-        self._persist_state()
 
     def _reset_scan_state(self):
         self._abort_pending_controller_request(reason="state_reset")
@@ -1858,8 +1857,6 @@ class BatchScannerApp:
         except ImportError:
             pass
         
-        if self.scanning_active:
-            self._persist_state()
         if self.log_file:
             close_log(self.log_file)
             self.log_file = None
