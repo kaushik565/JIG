@@ -174,7 +174,7 @@ class GPIOHardwareController(BaseHardwareController):  # pragma: no cover - hard
             GPIO.setup(self.busy_pin, GPIO.OUT, initial=GPIO.LOW)
         
         # SCANNER hardware compatibility: GPIO 18 and 21
-        # NOTE: GPIO 18 is shared between SCANNER (sbc_busy) and ACTJv20(RASP_IN_PIC)
+        # NOTE: GPIO 18 is typically shared between SCANNER (sbc_busy) and ACTJv20(RASP_IN_PIC)
         # Set initial state to HIGH to prevent "SBC ER-1" error on SCANNER hardware
         self.sbc_busy_pin = 18  # SBC busy indicator (matches SCANNER)
         self.status_pin = 21    # Status output to PIC (matches SCANNER)
@@ -184,14 +184,27 @@ class GPIOHardwareController(BaseHardwareController):  # pragma: no cover - hard
         self.int_pic_pin = self.handshake_pins.get("int_pic")
         self.shd_pic_pin = self.handshake_pins.get("shd_pic")
 
-        # Set up GPIO 18 only once (shared between sbc_busy and rasp_in_pic)
-        # Initial state HIGH to clear "SBC ER-1" error immediately
+        # Set up GPIO 18 (sbc_busy) with HIGH initial state to clear "SBC ER-1" error immediately
         GPIO.setup(self.sbc_busy_pin, GPIO.OUT, initial=GPIO.HIGH)
         
         # Set up GPIO 21 (status pin)
         GPIO.setup(self.status_pin, GPIO.OUT, initial=GPIO.HIGH)
         
-        # Set up other ACTJv20 pins (but skip GPIO 18 as it's already configured)
+        # Set up ACTJv20 RASP_IN_PIC pin only if it's different from sbc_busy_pin
+        # If they're the same pin (default GPIO 18), it's already configured above
+        if self.rasp_in_pic_pin is not None and self.rasp_in_pic_pin != self.sbc_busy_pin:
+            GPIO.setup(self.rasp_in_pic_pin, GPIO.OUT, initial=GPIO.HIGH)
+            self.logger.info(
+                "RASP_IN_PIC configured on GPIO %d (separate from SCANNER sbc_busy GPIO %d)",
+                self.rasp_in_pic_pin, self.sbc_busy_pin
+            )
+        elif self.rasp_in_pic_pin == self.sbc_busy_pin:
+            self.logger.info(
+                "RASP_IN_PIC and sbc_busy share GPIO %d (SCANNER/ACTJv20 compatible mode)",
+                self.rasp_in_pic_pin
+            )
+        
+        # Set up other ACTJv20 pins
         if self.shd_pic_pin is not None:
             GPIO.setup(self.shd_pic_pin, GPIO.OUT, initial=GPIO.LOW)
 
