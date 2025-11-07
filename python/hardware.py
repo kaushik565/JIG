@@ -174,24 +174,47 @@ class GPIOHardwareController(BaseHardwareController):  # pragma: no cover - hard
             GPIO.setup(self.busy_pin, GPIO.OUT, initial=GPIO.LOW)
         
         # SCANNER hardware compatibility: GPIO 18 and 21
+        # NOTE: GPIO 18 is typically shared between SCANNER (sbc_busy) and ACTJv20 (RASP_IN_PIC)
+        # Set initial state to HIGH to prevent "SBC ER-1" error on SCANNER hardware
         self.sbc_busy_pin = 18  # SBC busy indicator (matches SCANNER)
         self.status_pin = 21    # Status output to PIC (matches SCANNER)
-        GPIO.setup(self.sbc_busy_pin, GPIO.OUT, initial=GPIO.LOW)
-        GPIO.setup(self.status_pin, GPIO.OUT, initial=GPIO.LOW)
         
         # ACTJv20(RJSR) legacy hardware compatibility handshake pins
         self.rasp_in_pic_pin = self.handshake_pins.get("rasp_in_pic", 18)
         self.int_pic_pin = self.handshake_pins.get("int_pic")
         self.shd_pic_pin = self.handshake_pins.get("shd_pic")
 
+        # Set up GPIO 18 (sbc_busy) with HIGH initial state to clear "SBC ER-1" error immediately
+        GPIO.setup(self.sbc_busy_pin, GPIO.OUT, initial=GPIO.HIGH)
+        
+        # Set up GPIO 21 (status pin)
+        GPIO.setup(self.status_pin, GPIO.OUT, initial=GPIO.HIGH)
+        
+        # Set up ACTJv20 RASP_IN_PIC pin only if it's different from sbc_busy_pin
+        # If they're the same pin (default GPIO 18), it's already configured above
+        if self.rasp_in_pic_pin is None:
+            # RASP_IN_PIC not configured
+            self.logger.debug("RASP_IN_PIC not configured (rasp_in_pic_pin is None)")
+        elif self.rasp_in_pic_pin != self.sbc_busy_pin:
+            # Separate pins - need to setup RASP_IN_PIC independently
+            GPIO.setup(self.rasp_in_pic_pin, GPIO.OUT, initial=GPIO.HIGH)
+            self.logger.info(
+                "RASP_IN_PIC configured on GPIO %d (separate from sbc_busy_pin GPIO %d)",
+                self.rasp_in_pic_pin, self.sbc_busy_pin
+            )
+        else:
+            # Shared GPIO 18 for both RASP_IN_PIC and sbc_busy (already configured above)
+            self.logger.info(
+                "RASP_IN_PIC and sbc_busy_pin share GPIO %d (compatible with SCANNER and ACTJv20 modes)",
+                self.rasp_in_pic_pin
+            )
+        
+        # Set up other ACTJv20 pins
         if self.shd_pic_pin is not None:
             GPIO.setup(self.shd_pic_pin, GPIO.OUT, initial=GPIO.LOW)
 
         if self.int_pic_pin is not None:
             GPIO.setup(self.int_pic_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-
-        if self.rasp_in_pic_pin is not None:
-            GPIO.setup(self.rasp_in_pic_pin, GPIO.OUT, initial=GPIO.LOW)
 
         # Cartridge locating sensor pin (input, matches SCANNER)
         self.locating_sensor_pin = pin_map.get("cartridge_sensor", 20)  # Default to GPIO 20
@@ -279,7 +302,7 @@ class GPIOHardwareController(BaseHardwareController):  # pragma: no cover - hard
         GPIO.output(self.status_pin, GPIO.HIGH if ready else GPIO.LOW)
     
     def set_rasp_in_pic(self, state: bool) -> None:
-        """Set GPIO 12 (RASP_IN_PIC for ACTJv20(RJSR) firmware communication)."""
+        """Set RASP_IN_PIC pin (ACTJv20(RJSR) firmware communication, defaults to GPIO 18)."""
         if self.rasp_in_pic_pin is None:
             self.logger.debug("No RASP_IN_PIC pin configured; ignoring set request")
             return
@@ -359,16 +382,9 @@ def get_hardware_controller() -> BaseHardwareController:
     global _controller
     if _controller is None:
         _controller = _create_controller()
-        # Initialise PIC handshake line to BUSY/LOW until batch ready
-        try:
-            _controller.set_rasp_in_pic(False)
-            rasp_pin = ACTJ_LEGACY_GPIO_PINS.get("rasp_in_pic")
-            logging.getLogger("hardware").info(
-                "[INIT] RASP_IN_PIC (GPIO %s) forced LOW until batch ready.",
-                rasp_pin if rasp_pin is not None else "n/a",
-            )
-        except Exception as e:
-            logging.getLogger("hardware").error(f"[INIT] Failed to drive RASP_IN_PIC LOW: {e}")
+        # NOTE: RASP_IN_PIC initialization moved to launch_app() to prevent GPIO conflicts
+        # GPIO 18 must be HIGH immediately for SCANNER hardware (to clear "SBC ER-1" error)
+        # GPIO 18 will be managed by launch_app() and batch lifecycle methods
     return _controller
 
 
