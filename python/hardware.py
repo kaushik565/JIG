@@ -180,7 +180,7 @@ class GPIOHardwareController(BaseHardwareController):  # pragma: no cover - hard
         GPIO.setup(self.status_pin, GPIO.OUT, initial=GPIO.LOW)
         
         # ACTJv20(RJSR) legacy hardware compatibility handshake pins
-        self.rasp_in_pic_pin = self.handshake_pins.get("rasp_in_pic", 12)
+        self.rasp_in_pic_pin = self.handshake_pins.get("rasp_in_pic", 18)
         self.int_pic_pin = self.handshake_pins.get("int_pic")
         self.shd_pic_pin = self.handshake_pins.get("shd_pic")
 

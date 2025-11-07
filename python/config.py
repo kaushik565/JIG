@@ -81,9 +81,9 @@ _DEFAULTS: Dict[str, Dict[str, Any]] = {
         "enabled": "true",  # Enable ACTJv20(RJSR) firmware integration
         "uart_port": "/dev/serial0",  # UART port for PIC18F4550 communication
         "baudrate": "115200",  # Must match firmware SBC_UARTInit() setting
-        "gpio_rasp_in_pic": "12",  # GPIO pin for RASP_IN_PIC signal
-        "gpio_int_pic": "24",  # GPIO pin for INT_PIC signal  
-        "gpio_shd_pic": "25",  # GPIO pin for SHD_PIC signal
+        "gpio_rasp_in_pic": "18",  # GPIO pin for RASP_IN_PIC signal (RB6 on PIC)
+        "gpio_int_pic": "24",  # GPIO pin for INT_PIC signal (RB5 on PIC)
+        "gpio_shd_pic": "25",  # GPIO pin for SHD_PIC signal (RB7 on PIC)
         "command_timeout": "12000",  # Timeout for firmware commands (ms)
         "auto_start": "true",  # Automatically start legacy integration
     },
