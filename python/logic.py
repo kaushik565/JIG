@@ -10,14 +10,26 @@ import time
 from datetime import datetime
 from typing import Callable, Optional
 
-import tkinter as tk
+# Minimal shims to avoid hard dependency on tkinter or hardware
+try:
+    import tkinter as tk  # noqa: F401
+except Exception:  # pragma: no cover - environment without Tk
+    tk = None  # type: ignore
 
-from config import LOG_FOLDER, RECOVERY_FILE
-from hardware import get_hardware_controller
+# These are optional; provide safe fallbacks
+try:
+    from config import LOG_FOLDER, RECOVERY_FILE  # type: ignore
+except Exception:
+    LOG_FOLDER = "batch_logs"
+    RECOVERY_FILE = "recovery.json"
 
+# Hardware signaling is optional for compatibility
+try:
+    from hardware import get_hardware_controller  # type: ignore
+    _hardware = get_hardware_controller()
+except Exception:  # pragma: no cover - no hardware on dev
+    _hardware = None
 
-# Hardware controller
-_hardware = get_hardware_controller()
 _hardware_logger = logging.getLogger("hardware")
 _hardware_error_handler: Optional[Callable[[str], None]] = None
 
@@ -57,6 +69,8 @@ def _handle_hardware_exception(exc: Exception) -> None:
 # ---------------- LED & BUZZER Integration ----------------
 def blink_light(color, duration=0.3):
     """Trigger LED blink; swallow hardware errors to keep UI alive."""
+    if not _hardware:
+        return
     try:
         _hardware.light_on(color)
         time.sleep(duration)
@@ -67,6 +81,8 @@ def blink_light(color, duration=0.3):
 
 def buzz(duration=0.5):
     """Trigger buzzer with hardware exception handling."""
+    if not _hardware:
+        return
     try:
         _hardware.buzz(duration)
     except Exception as exc:  # pragma: no cover - hardware dependent
