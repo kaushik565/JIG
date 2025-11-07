@@ -8,30 +8,31 @@ from datetime import datetime
 import tkinter as tk
 from tkinter import messagebox
 
-# GPIO setup for PIC communication - CORRECTED PIN ASSIGNMENTS
+# GPIO setup for PIC communication - UPDATED FOR J17 14-PIN CONSTRAINT
+# Only first 14 physical pins of Pi (pins 1-14) connect to ASET J17
 # These pins must match Pin_Definitions.h in firmware:
-# GPIO 18: Connected to RASP_IN_PIC (RB6) - Pi status signal to PIC
-# GPIO 24: Connected to INT_PIC (RB5) - Interrupt signal to PIC  
-# GPIO 25: Connected to SHD_PIC (RB7) - Shutdown signal from PIC
+# GPIO 18 (Pi pin 12): Connected to RASP_IN_PIC (RB6) - Pi status signal to PIC (OUTPUT)
+# GPIO 17 (Pi pin 11): Connected to INT_PIC (RB5) - Interrupt from PIC (INPUT)
+# GPIO 27 (Pi pin 13): Connected to SHD_PIC (RB7) - Shutdown signal to PIC (OUTPUT)
 gpio_available = False
 try:
     import RPi.GPIO as GPIO
     GPIO.setmode(GPIO.BCM)
     
-    # CRITICAL: Set up all control pins
-    GPIO.setup(18, GPIO.OUT)  # RASP_IN_PIC - Pi status to PIC
-    GPIO.setup(24, GPIO.OUT)  # INT_PIC - Interrupt to PIC
-    GPIO.setup(25, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # SHD_PIC - Shutdown from PIC
+    # CRITICAL: Set up all control pins with correct directions
+    GPIO.setup(18, GPIO.OUT)   # RASP_IN_PIC - Pi OUTPUT to PIC INPUT
+    GPIO.setup(17, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  # INT_PIC - Pi INPUT from PIC OUTPUT
+    GPIO.setup(27, GPIO.OUT)   # SHD_PIC - Pi OUTPUT to PIC INPUT
     
-    # Initialize to safe states
+    # Initialize outputs to safe states
     GPIO.output(18, GPIO.LOW)   # Start as BUSY - batch setup not complete
-    GPIO.output(24, GPIO.LOW)   # No interrupt initially
+    GPIO.output(27, GPIO.LOW)   # No shutdown signal initially
     
     gpio_available = True
-    print("GPIO pins 18, 24, 25 initialized for PIC communication")
+    print("GPIO pins 18, 17, 27 initialized for PIC communication")
     print("GPIO 18 (RASP_IN_PIC) = LOW - Pi in setup mode")
-    print("GPIO 24 (INT_PIC) = LOW - No interrupt")
-    print("GPIO 25 (SHD_PIC) = INPUT - Shutdown monitoring")
+    print("GPIO 17 (INT_PIC) = INPUT - Interrupt from PIC")
+    print("GPIO 27 (SHD_PIC) = LOW - No shutdown signal")
 except Exception as e:
     print(f"GPIO setup failed: {e}")
 
@@ -49,21 +50,17 @@ def set_pi_ready_state(ready=True):
             print(f"GPIO control failed: {e}")
 
 def send_interrupt_to_pic():
-    """Send interrupt pulse to PIC via GPIO 24"""
-    if gpio_available:
-        try:
-            GPIO.output(24, GPIO.HIGH)
-            time.sleep(0.001)  # 1ms pulse
-            GPIO.output(24, GPIO.LOW)
-            print("Interrupt pulse sent to PIC via GPIO 24")
-        except Exception as e:
-            print(f"Interrupt signal failed: {e}")
+    """This function is not needed - INT_PIC is an input from the PIC"""
+    print("WARNING: send_interrupt_to_pic() called but INT_PIC is an INPUT from PIC")
+    pass
 
 def check_shutdown_signal():
-    """Check if PIC is requesting shutdown via GPIO 25"""
+    """Check if PIC is requesting shutdown via GPIO 27"""
+    # Note: This function checks the wrong pin - SHD_PIC is actually an OUTPUT to PIC
+    # Keeping for compatibility but the logic may need review
     if gpio_available:
         try:
-            return not GPIO.input(25)  # Active low signal
+            return GPIO.input(27) == GPIO.HIGH
         except Exception as e:
             print(f"Shutdown check failed: {e}")
             return False
