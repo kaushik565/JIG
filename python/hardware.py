@@ -192,21 +192,22 @@ class GPIOHardwareController(BaseHardwareController):  # pragma: no cover - hard
         
         # Set up ACTJv20 RASP_IN_PIC pin only if it's different from sbc_busy_pin
         # If they're the same pin (default GPIO 18), it's already configured above
-        if self.rasp_in_pic_pin is not None and self.rasp_in_pic_pin != self.sbc_busy_pin:
+        if self.rasp_in_pic_pin is None:
+            # RASP_IN_PIC not configured
+            self.logger.debug("RASP_IN_PIC not configured (rasp_in_pic_pin is None)")
+        elif self.rasp_in_pic_pin != self.sbc_busy_pin:
+            # Separate pins - need to setup RASP_IN_PIC independently
             GPIO.setup(self.rasp_in_pic_pin, GPIO.OUT, initial=GPIO.HIGH)
             self.logger.info(
                 "RASP_IN_PIC configured on GPIO %d (separate from SCANNER sbc_busy GPIO %d)",
                 self.rasp_in_pic_pin, self.sbc_busy_pin
             )
-        elif self.rasp_in_pic_pin == self.sbc_busy_pin:
-            # rasp_in_pic_pin equals sbc_busy_pin (shared GPIO 18)
+        else:
+            # Shared GPIO 18 for both RASP_IN_PIC and sbc_busy (already configured above)
             self.logger.info(
                 "RASP_IN_PIC and sbc_busy share GPIO %d (SCANNER/ACTJv20 compatible mode)",
                 self.rasp_in_pic_pin
             )
-        else:
-            # rasp_in_pic_pin is None
-            self.logger.debug("RASP_IN_PIC not configured (rasp_in_pic_pin is None)")
         
         # Set up other ACTJv20 pins
         if self.shd_pic_pin is not None:
@@ -301,7 +302,7 @@ class GPIOHardwareController(BaseHardwareController):  # pragma: no cover - hard
         GPIO.output(self.status_pin, GPIO.HIGH if ready else GPIO.LOW)
     
     def set_rasp_in_pic(self, state: bool) -> None:
-        """Set GPIO 12 (RASP_IN_PIC for ACTJv20(RJSR) firmware communication)."""
+        """Set RASP_IN_PIC pin (ACTJv20(RJSR) firmware communication, defaults to GPIO 18)."""
         if self.rasp_in_pic_pin is None:
             self.logger.debug("No RASP_IN_PIC pin configured; ignoring set request")
             return
