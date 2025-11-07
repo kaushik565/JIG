@@ -8,66 +8,18 @@ from datetime import datetime
 import tkinter as tk
 from tkinter import messagebox
 
-# GPIO setup for PIC communication - CORRECTED PIN ASSIGNMENTS
-# These pins must match Pin_Definitions.h in firmware:
-# GPIO 18: Connected to RASP_IN_PIC (RB6) - Pi status signal to PIC
-# GPIO 24: Connected to INT_PIC (RB5) - Interrupt signal to PIC  
-# GPIO 25: Connected to SHD_PIC (RB7) - Shutdown signal from PIC
-gpio_available = False
-try:
-    import RPi.GPIO as GPIO
-    GPIO.setmode(GPIO.BCM)
-    
-    # CRITICAL: Set up all control pins
-    GPIO.setup(18, GPIO.OUT)  # RASP_IN_PIC - Pi status to PIC
-    GPIO.setup(24, GPIO.OUT)  # INT_PIC - Interrupt to PIC
-    GPIO.setup(25, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # SHD_PIC - Shutdown from PIC
-    
-    # Initialize to safe states
-    GPIO.output(18, GPIO.LOW)   # Start as BUSY - batch setup not complete
-    GPIO.output(24, GPIO.LOW)   # No interrupt initially
-    
-    gpio_available = True
-    print("GPIO pins 18, 24, 25 initialized for PIC communication")
-    print("GPIO 18 (RASP_IN_PIC) = LOW - Pi in setup mode")
-    print("GPIO 24 (INT_PIC) = LOW - No interrupt")
-    print("GPIO 25 (SHD_PIC) = INPUT - Shutdown monitoring")
-except Exception as e:
-    print(f"GPIO setup failed: {e}")
-
-def set_pi_ready_state(ready=True):
-    """Set GPIO 18 to signal PIC about Pi readiness
-    ready=True: GPIO HIGH (Pi ready for commands)
-    ready=False: GPIO LOW (Pi busy, don't send commands)
-    """
-    if gpio_available:
-        try:
-            GPIO.output(18, GPIO.HIGH if ready else GPIO.LOW)
-            state = "READY" if ready else "BUSY"
-            print(f"GPIO 18 (RASP_IN_PIC) set to signal Pi is {state}")
-        except Exception as e:
-            print(f"GPIO control failed: {e}")
-
-def send_interrupt_to_pic():
-    """Send interrupt pulse to PIC via GPIO 24"""
-    if gpio_available:
-        try:
-            GPIO.output(24, GPIO.HIGH)
-            time.sleep(0.001)  # 1ms pulse
-            GPIO.output(24, GPIO.LOW)
-            print("Interrupt pulse sent to PIC via GPIO 24")
-        except Exception as e:
-            print(f"Interrupt signal failed: {e}")
-
-def check_shutdown_signal():
-    """Check if PIC is requesting shutdown via GPIO 25"""
-    if gpio_available:
-        try:
-            return not GPIO.input(25)  # Active low signal
-        except Exception as e:
-            print(f"Shutdown check failed: {e}")
-            return False
-    return False
+# GPIO setup for PIC communication is now handled by the hardware controller
+# which reads pin assignments from settings.ini [actj_legacy] section.
+# 
+# Pin mapping (must match Pin_Definitions.h in ACTJv20 firmware):
+# - RASP_IN_PIC (RB6): Pi status signal to PIC (HIGH=ready, LOW=busy)
+# - INT_PIC (RB5): Interrupt signal to PIC
+# - SHD_PIC (RB7): Shutdown signal from PIC
+#
+# Configure these pins in settings.ini under [actj_legacy]:
+#   gpio_rasp_in_pic = 18
+#   gpio_int_pic = 24  
+#   gpio_shd_pic = 25
 
 try:  # Optional dependency – skip controller sync if unavailable
     import serial
