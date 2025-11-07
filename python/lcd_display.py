@@ -155,13 +155,22 @@ def get_lcd_controller() -> Optional[BaseLCDController]:
     try:
         if LCD_TYPE.lower() == "i2c" and CharLCD is not None:
             return I2CLCDController(LCD_ADDRESS, LCD_WIDTH, LCD_HEIGHT)
+        elif LCD_TYPE.lower() == "i2c_via_pic":
+            # LCD controlled via PIC firmware, not directly by Python
+            logging.getLogger("lcd").info("LCD controlled via PIC firmware")
+            return None
         elif LCD_TYPE.lower() == "mock":
+            logging.getLogger("lcd").warning("Using mock LCD controller - NOT for production use")
             return MockLCDController(LCD_WIDTH, LCD_HEIGHT)
+        else:
+            logging.getLogger("lcd").error(f"Unknown LCD type: {LCD_TYPE}")
+            return None
     except Exception as e:
-        logging.getLogger("lcd").exception("Falling back to mock LCD: %s", e)
-    
-    # Fallback to mock
-    return MockLCDController(LCD_WIDTH, LCD_HEIGHT)
+        logging.getLogger("lcd").error("Failed to initialize LCD controller: %s", e)
+        if LCD_TYPE.lower() != "mock":
+            logging.getLogger("lcd").error("LCD hardware initialization failed - check I2C connection")
+            raise RuntimeError(f"LCD controller initialization failed for type '{LCD_TYPE}'") from e
+        return None
 
 
 class LCDManager:

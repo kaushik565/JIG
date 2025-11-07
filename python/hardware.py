@@ -379,5 +379,11 @@ def _create_controller() -> BaseHardwareController:
         try:
             return GPIOHardwareController(HARDWARE_PIN_MODE, HARDWARE_PINS, ACTJ_LEGACY_GPIO_PINS)
         except Exception as exc:  # pragma: no cover - hardware dependent
-            logger.exception("Falling back to mock hardware: %s", exc)
-    return MockHardwareController(ACTJ_LEGACY_GPIO_PINS)
+            logger.error("Failed to initialize GPIO hardware: %s", exc)
+            logger.error("GPIO hardware is required for production jig operation")
+            raise RuntimeError("GPIO hardware initialization failed - cannot run on production jig") from exc
+    elif controller == "mock":
+        logger.warning("Using mock hardware controller - NOT for production use")
+        return MockHardwareController(ACTJ_LEGACY_GPIO_PINS)
+    else:
+        raise ValueError(f"Unknown hardware controller: {controller}")

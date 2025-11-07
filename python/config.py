@@ -31,7 +31,7 @@ _DEFAULTS: Dict[str, Dict[str, Any]] = {
         "auto_advance": "true",
     },
     "hardware": {
-        "controller": "mock",  # options: mock, gpio
+        "controller": "gpio",  # options: mock, gpio - Set to gpio for production jig
         "pin_mode": "BCM",
     "red_pin": "20",
     "green_pin": "21",
