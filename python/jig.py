@@ -308,6 +308,12 @@ def get_jig_controller() -> Optional[BaseJigController]:
     if HARDWARE_CONTROLLER.lower().strip() == "gpio" and GPIO is not None:
         try:
             return GPIOJigController(cfg)
-        except Exception as exc:  # pragma: no cover - fallback
-            logging.getLogger("jig").exception("Falling back to mock jig: %s", exc)
-    return MockJigController(cfg)
+        except Exception as exc:  # pragma: no cover - hardware dependent
+            logging.getLogger("jig").error("Failed to initialize GPIO jig controller: %s", exc)
+            logging.getLogger("jig").error("GPIO hardware is required for production jig operation")
+            raise RuntimeError("GPIO jig controller initialization failed - cannot run on production jig") from exc
+    elif HARDWARE_CONTROLLER.lower().strip() == "mock":
+        logging.getLogger("jig").warning("Using mock jig controller - NOT for production use")
+        return MockJigController(cfg)
+    else:
+        raise ValueError(f"Unknown hardware controller: {HARDWARE_CONTROLLER}")

@@ -31,7 +31,7 @@ _DEFAULTS: Dict[str, Dict[str, Any]] = {
         "auto_advance": "true",
     },
     "hardware": {
-        "controller": "mock",  # options: mock, gpio
+        "controller": "gpio",  # options: mock, gpio - Set to gpio for production jig
         "pin_mode": "BCM",
     "red_pin": "20",
     "green_pin": "21",
@@ -81,9 +81,9 @@ _DEFAULTS: Dict[str, Dict[str, Any]] = {
         "enabled": "true",  # Enable ACTJv20(RJSR) firmware integration
         "uart_port": "/dev/serial0",  # UART port for PIC18F4550 communication
         "baudrate": "115200",  # Must match firmware SBC_UARTInit() setting
-        "gpio_rasp_in_pic": "12",  # GPIO pin for RASP_IN_PIC signal
-        "gpio_int_pic": "24",  # GPIO pin for INT_PIC signal  
-        "gpio_shd_pic": "25",  # GPIO pin for SHD_PIC signal
+        "gpio_rasp_in_pic": "18",  # GPIO pin for RASP_IN_PIC signal (RB6 on PIC) - Pi pin 12
+        "gpio_int_pic": "17",  # GPIO pin for INT_PIC signal (RB5 on PIC) - Pi pin 11
+        "gpio_shd_pic": "27",  # GPIO pin for SHD_PIC signal (RB7 on PIC) - Pi pin 13
         "command_timeout": "12000",  # Timeout for firmware commands (ms)
         "auto_start": "true",  # Automatically start legacy integration
     },
@@ -269,8 +269,8 @@ def load_config(config_path: str | Path = CONFIG_FILE) -> AppConfig:
         actj_legacy_baudrate=parser.getint("actj_legacy", "baudrate", fallback=115200),
         actj_legacy_gpio_pins={
             "rasp_in_pic": parser.getint("actj_legacy", "gpio_rasp_in_pic", fallback=18),
-            "int_pic": parser.getint("actj_legacy", "gpio_int_pic", fallback=24),
-            "shd_pic": parser.getint("actj_legacy", "gpio_shd_pic", fallback=25),
+            "int_pic": parser.getint("actj_legacy", "gpio_int_pic", fallback=17),
+            "shd_pic": parser.getint("actj_legacy", "gpio_shd_pic", fallback=27),
         },
         actj_legacy_timeout=parser.getint("actj_legacy", "command_timeout", fallback=12000),
         actj_legacy_auto_start=parser.getboolean("actj_legacy", "auto_start", fallback=True),
