@@ -131,6 +131,8 @@ class ACTJv20UARTProtocol:
     
     def _listen_loop(self):
         """Main listening loop for ACTJv20 commands (BINARY protocol)."""
+        startup_grace_period = time.time() + 5.0  # Ignore noise for first 5 seconds
+        
         while self.running:
             try:
                 if self.serial_port and self.serial_port.in_waiting > 0:
@@ -138,8 +140,9 @@ class ACTJv20UARTProtocol:
                     data = self.serial_port.read(1)
                     if data:
                         cmd_byte = data[0]  # Get the actual byte value
+                        is_startup = time.time() < startup_grace_period
                         self.logger.debug(f"Received ACTJv20 byte: {cmd_byte} (0x{cmd_byte:02X})")
-                        self._handle_command(chr(cmd_byte))  # Convert to char for compatibility
+                        self._handle_command(chr(cmd_byte), is_startup=is_startup)
                 
                 time.sleep(0.01)  # Small delay to prevent busy loop
                 
@@ -147,7 +150,7 @@ class ACTJv20UARTProtocol:
                 self.logger.error(f"Error in ACTJv20 listen loop: {e}")
                 time.sleep(0.1)
     
-    def _handle_command(self, command):
+    def _handle_command(self, command, is_startup=False):
         """Handle command from ACTJv20 firmware (BINARY protocol)."""
         # The working firmware sends BINARY bytes, not ASCII strings
         # Convert received byte to its numeric value
@@ -167,8 +170,22 @@ class ACTJv20UARTProtocol:
             self.logger.info("ACTJv20 stop command (0 = 0x00)")
             self._handle_stop_command()
             
+        elif cmd_byte == 23:  # 0x17 - Start recording (legacy, not used in current firmware)
+            self.logger.debug("ACTJv20 start recording command (23 = 0x17) - ignored")
+            
         else:
-            self.logger.warning(f"Unknown ACTJv20 command: {cmd_byte} (0x{cmd_byte:02X})")
+            # Filter out startup noise, LCD text, and other non-command bytes
+            # Common patterns: printable ASCII (0x20-0x7E) from LCD display text
+            # or random bytes during UART initialization
+            if is_startup:
+                # During startup, only log debug messages for unknown bytes
+                self.logger.debug(f"Ignoring startup noise: {cmd_byte} (0x{cmd_byte:02X})")
+            elif 0x20 <= cmd_byte <= 0x7E:
+                # Printable ASCII - likely LCD display text being echoed
+                self.logger.debug(f"Ignoring LCD text byte: {cmd_byte} (0x{cmd_byte:02X}) = '{chr(cmd_byte)}'")
+            else:
+                # Truly unexpected non-printable byte outside startup
+                self.logger.warning(f"Unknown ACTJv20 command: {cmd_byte} (0x{cmd_byte:02X})")
     
     def _handle_scan_command(self):
         """Handle QR scan command from ACTJv20."""
