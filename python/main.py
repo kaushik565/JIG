@@ -49,22 +49,18 @@ def set_pi_ready_state(ready=True):
         except Exception as e:
             print(f"GPIO control failed: {e}")
 
-def send_interrupt_to_pic():
-    """This function is not needed - INT_PIC is an input from the PIC"""
-    print("WARNING: send_interrupt_to_pic() called but INT_PIC is an INPUT from PIC")
-    pass
-
-def check_shutdown_signal():
-    """Check if PIC is requesting shutdown via GPIO 27"""
-    # Note: This function checks the wrong pin - SHD_PIC is actually an OUTPUT to PIC
-    # Keeping for compatibility but the logic may need review
+def set_shutdown_signal(shutdown=False):
+    """Set GPIO 27 to signal PIC about shutdown request
+    shutdown=True: Request PIC to shutdown
+    shutdown=False: Normal operation
+    """
     if gpio_available:
         try:
-            return GPIO.input(27) == GPIO.HIGH
+            GPIO.output(27, GPIO.HIGH if shutdown else GPIO.LOW)
+            state = "SHUTDOWN" if shutdown else "NORMAL"
+            print(f"GPIO 27 (SHD_PIC) set to {state}")
         except Exception as e:
-            print(f"Shutdown check failed: {e}")
-            return False
-    return False
+            print(f"Shutdown signal control failed: {e}")
 
 try:  # Optional dependency – skip controller sync if unavailable
     import serial
